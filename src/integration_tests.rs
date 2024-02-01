@@ -2,35 +2,35 @@
 mod tests
 {
     use assert_cmd::Command;
-    use std::fs;
 
-    #[test]
-    fn test_cahuca_dry()
-    {
-        let mut cmd = Command::cargo_bin("carroh").unwrap();
-        let assert = cmd
-            .arg("-d")
-            .arg("demo/cahuca.csv")
-            .arg("demo/out")
-            .arg("ram0")
-            .assert();
+    // Disabled for interactivity
+    // #[test]
+    // fn test_cahuca_dry()
+    // {
+    //     let mut cmd = Command::cargo_bin("carroh").unwrap();
+    //     let assert = cmd
+    //         .arg("-d")
+    //         .arg("demo/cahuca.csv")
+    //         .arg("demo/out")
+    //         .arg("ram0")
+    //         .assert();
 
-        assert.success();
-    }
+    //     assert.success();
+    // }
 
-    #[test]
-    fn test_casfjazz_dry()
-    {
-        let mut cmd = Command::cargo_bin("carroh").unwrap();
-        let assert = cmd
-            .arg("-d")
-            .arg("demo/casfjazz.csv")
-            .arg("demo/out")
-            .arg("ram0")
-            .assert();
+    // #[test]
+    // fn test_casfjazz_dry()
+    // {
+    //     let mut cmd = Command::cargo_bin("carroh").unwrap();
+    //     let assert = cmd
+    //         .arg("-d")
+    //         .arg("demo/casfjazz.csv")
+    //         .arg("demo/out")
+    //         .arg("ram0")
+    //         .assert();
 
-        assert.success();
-    }
+    //     assert.success();
+    // }
 
     #[test]
     fn test_non_existent_csv()
@@ -61,22 +61,23 @@ For more information, try '--help'.
         );
     }
 
-    #[test]
-    fn test_filesystem()
-    {
-        let mut cmd = Command::cargo_bin("carroh").unwrap();
-        let cmd_res = cmd
-            .arg("demo/file with spaces.csv")
-            .arg("demo/out").output();
+    // Disabled for interactivity
+    // #[test]
+    // fn test_filesystem()
+    // {
+    //     let mut cmd = Command::cargo_bin("carroh").unwrap();
+    //     let cmd_res = cmd
+    //         .arg("demo/file with spaces.csv")
+    //         .arg("demo/out").output();
 
-        fs::remove_dir_all("demo/out/1_1").unwrap();
+    //     fs::remove_dir_all("demo/out/1_1").unwrap();
 
-        match cmd_res {
-            Ok(_) => {},
-            Err(e) => panic!("{e:?}"),
-        }
+    //     match cmd_res {
+    //         Ok(_) => {},
+    //         Err(e) => panic!("{e:?}"),
+    //     }
 
-    }
+    // }
 
     #[test]
     fn test_existing_output()

@@ -6,6 +6,7 @@ use inquire::Text;
 use log::debug;
 use std::{
     error::Error,
+    fs,
     path::{
         self,
         PathBuf,
@@ -83,6 +84,62 @@ impl CliHandler for LinuxCliHandler
                 )
                 .into()
             })
+    }
+
+    fn fix_permissions(
+        &self,
+        in_path: &PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
+        debug!("Fixing permissions fo files in {in_path:?}");
+
+        let in_path = path::absolute(in_path)?.into_os_string();
+
+        Command::new("chmod")
+            .arg(format!("666"))
+            .arg(format!("-R"))
+            .arg(in_path)
+            .run()
+            .map(|_| ())
+            .map_err(|e| {
+                format!("Failure while trying to fix permissions: {e}").into()
+            })
+    }
+
+    fn mount_iso(
+        &self,
+        iso_path: &PathBuf,
+        mount_point: &PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
+        debug!(
+            "Mounting ISO file from {iso_path:?} at mount point \
+             {mount_point:?}"
+        );
+
+        Command::new("mount")
+            .arg(format!("-o"))
+            .arg(format!("loop"))
+            .arg(iso_path)
+            .arg(mount_point)
+            .run()
+            .map(|_| ())
+            .map_err(|e| {
+                format!("Failure while trying to mount ISO: {e}").into()
+            })
+    }
+
+    fn copy_rec(
+        &self,
+        from: &PathBuf,
+        to: &PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
+        debug!("Copying files from {from:?} to {to:?}");
+
+        fs::copy(from, to)
+            .map(|_| ())
+            .map_err(|e| format!("Failure while copying files: {e}").into())
     }
 }
 

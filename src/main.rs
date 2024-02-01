@@ -46,15 +46,16 @@ fn main() -> Result<(), Box<dyn Error>>
         DirectoryStatus::IsDirectory,
     ))?;
 
-    let mut cp = Agent::new(input_path.clone(), args.dry_run)?;
+    let mut agent = Agent::new(input_path.clone(), args.dry_run)?;
 
     // Ensure marc column exists.  If it is not there, indicate the error and
     // exit.
     // For every line in the CSV, verify that the marc column is equal
     // to the previous row's value.  If a row has a different value, print the
     // invalid lines and exit.
-    cp.print_all_rows()?;
-    cp.assert_equal_column_values(&"marc".to_string())
+    agent.print_all_rows()?;
+    agent
+        .assert_equal_column_values(&"marc".to_string())
         .map_err(|e| format!("{e}"))?;
 
     // Ensure obj_grant_cycle column exists.  If it is not there, indicate the
@@ -62,7 +63,8 @@ fn main() -> Result<(), Box<dyn Error>>
     // For every line in the CSV, verify that the grant_cycle column is equal
     // to the previous row's value.  If a row has a different value, print the
     // invalid lines and exit.
-    cp.assert_equal_column_values(&"obj_grant_cycle".to_string())
+    agent
+        .assert_equal_column_values(&"obj_grant_cycle".to_string())
         .map_err(|e| format!("{e}"))?;
 
     // Determine if the file should use the obj_call_number column (ocn) or
@@ -79,14 +81,14 @@ fn main() -> Result<(), Box<dyn Error>>
     //   the selected choice.
     let ocn_col = "obj_call_number".to_string();
     let oti_col = "obj_temporary_id".to_string();
-    let pit_col = cp.pick_populated_column(&ocn_col, &oti_col)?;
+    let pit_col = agent.pick_populated_column(&ocn_col, &oti_col)?;
     let pit_col_i = input_path.find_single_header_index(pit_col)?;
 
     // Compute the grant cycle descriptor (gcd):
     // - Take the obj_grant_cycle field from the first row.
     // - Substitute any "/" characters for "-", giving the gcd.
-    let ogc = cp.first_value(&"obj_grant_cycle".to_string())?;
-    let marc = cp.first_value(&"marc".to_string())?;
+    let ogc = agent.first_value(&"obj_grant_cycle".to_string())?;
+    let marc = agent.first_value(&"marc".to_string())?;
     let gcd = ogc.replace("/", "-");
 
     // Compute the parent directory location (pdl) as ofp/gcd + "_" + marc
@@ -97,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>>
     pdl.validate_path(PathValidationOptions::DoesNotExist)?;
 
     // Create the pdl.
-    cp.create_directory(&pdl)?;
+    agent.create_directory(&pdl)?;
 
     // Compute the raw file directory location (rdl) as
     // pdl/marc + "_" + gcd + "_Raw".
@@ -108,18 +110,17 @@ fn main() -> Result<(), Box<dyn Error>>
     rdl.validate_path(PathValidationOptions::DoesNotExist)?;
 
     // Create the rdl.
-    cp.create_directory(&rdl)?;
+    agent.create_directory(&rdl)?;
 
     // Prompt the user to select the imaging device (imd) from the local
     // system devices. Use third argument as default.
     let dev = match args.rom_device {
         | Some(d) => d,
-        | None => cp.select_rom_device()?,
+        | None => agent.select_rom_device()?,
     };
     info!("Using device '{dev}' for imaging.");
 
     // For every line in the CSV:
-
     for row in input_path.csv()?.records() {
         // For each semi-colon-separated value in the pit (cvp):
         let pit_value = row?[pit_col_i].to_string();
@@ -137,18 +138,19 @@ fn main() -> Result<(), Box<dyn Error>>
 
                 // Wait for the user to press enter to continue.
                 if Confirm::new(&format!(
-                    "Is the disk associated with {cvp} inserted into {dev}? (Yes/No)"
+                    "Is the disk associated with {cvp} inserted into {dev}? \
+                     (Yes/No)"
                 ))
                 .prompt()?
                 {
                     break;
                 }
 
-                cp.eject_tray()?;
+                agent.eject_tray()?;
             }
 
             // Retain the system's disk label (sdl) from the imd.
-            let sdl = cp.get_rom_device_label(&dev)?;
+            let sdl = agent.get_rom_device_label(&dev)?;
 
             // Compute the cvp's iso location (cil) as rdl/sdl + ".iso"
             let mut cil = rdl.clone();
@@ -158,17 +160,26 @@ fn main() -> Result<(), Box<dyn Error>>
             // Write the imd's ISO and to cil.
             let mut dev_path = PathBuf::from("/dev");
             dev_path.push(&dev);
-            cp.dump_iso(&dev_path, &cil)?;
+            agent.dump_iso(&dev_path, &cil)?;
 
             // Compute the cvp's file location (cfl) as rdl/sdl.
             let mut cfl = rdl.clone();
             cfl.push(sdl);
             cfl.validate_path(PathValidationOptions::DoesNotExist)?;
 
-            // TODO: Extract the contents of the cil to the cfl.
+            // Extract the contents of the cil to the cfl.
+            // TODO: test with root.  We have an issue where the program will
+            // need to be run with elevated privileges in order to mount the iso
+            // in order to extract the contents.  Let's validate this once we
+            // confirm the rest of the system is operating as expected.
+            // agent.extract_iso(cil, cfl);
+
+            // Fix permissions in the entire rdl since we're probably running as
+            // root.
+            agent.fix_permissions(&rdl)?;
 
             // Eject the disk.
-            cp.eject_tray()?;
+            agent.eject_tray()?;
         }
     }
 
