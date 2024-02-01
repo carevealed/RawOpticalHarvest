@@ -12,3 +12,5 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+demo/out/2023-2024_cahuca/cahuca_2023-2024_Raw/TESTDISK.iso
