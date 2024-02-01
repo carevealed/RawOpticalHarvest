@@ -6,7 +6,6 @@ use inquire::Text;
 use log::debug;
 use std::{
     error::Error,
-    fs,
     path::{
         self,
         PathBuf,
@@ -106,28 +105,28 @@ impl CliHandler for LinuxCliHandler
             })
     }
 
-    fn mount_iso(
-        &self,
-        iso_path: &PathBuf,
-        mount_point: &PathBuf,
-    ) -> Result<(), Box<dyn Error>>
-    {
-        debug!(
-            "Mounting ISO file from {iso_path:?} at mount point \
-             {mount_point:?}"
-        );
+    // fn mount_iso(
+    //     &self,
+    //     iso_path: &PathBuf,
+    //     mount_point: &PathBuf,
+    // ) -> Result<(), Box<dyn Error>>
+    // {
+    //     debug!(
+    //         "Mounting ISO file from {iso_path:?} at mount point \
+    //          {mount_point:?}"
+    //     );
 
-        Command::new("mount")
-            .arg(format!("-o"))
-            .arg(format!("loop"))
-            .arg(iso_path)
-            .arg(mount_point)
-            .run()
-            .map(|_| ())
-            .map_err(|e| {
-                format!("Failure while trying to mount ISO: {e}").into()
-            })
-    }
+    //     Command::new("mount")
+    //         .arg(format!("-o"))
+    //         .arg(format!("loop"))
+    //         .arg(iso_path)
+    //         .arg(mount_point)
+    //         .run()
+    //         .map(|_| ())
+    //         .map_err(|e| {
+    //             format!("Failure while trying to mount ISO: {e}").into()
+    //         })
+    // }
 
     fn copy_rec(
         &self,
@@ -137,7 +136,11 @@ impl CliHandler for LinuxCliHandler
     {
         debug!("Copying files from {from:?} to {to:?}");
 
-        fs::copy(from, to)
+        Command::new("cp")
+            .arg("--recursive")
+            .arg(from)
+            .arg(to)
+            .run()
             .map(|_| ())
             .map_err(|e| format!("Failure while copying files: {e}").into())
     }

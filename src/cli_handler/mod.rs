@@ -32,11 +32,11 @@ pub trait CliHandler
         in_path: &PathBuf,
     ) -> Result<(), Box<dyn Error>>;
 
-    fn mount_iso(
-        &self,
-        iso_path: &PathBuf,
-        mount_point: &PathBuf,
-    ) -> Result<(), Box<dyn Error>>;
+    // fn mount_iso(
+    //     &self,
+    //     iso_path: &PathBuf,
+    //     mount_point: &PathBuf,
+    // ) -> Result<(), Box<dyn Error>>;
 
     fn copy_rec(
         &self,

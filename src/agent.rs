@@ -11,7 +11,7 @@ use std::{
     fs,
     path::PathBuf,
 };
-use tempfile::TempDir;
+// use tempfile::TempDir;
 
 fn get_cli_handler() -> Box<dyn CliHandler>
 {
@@ -165,24 +165,24 @@ impl Agent
         self.cli_handler.fix_permissions(in_path)
     }
 
-    pub fn extract_iso(
-        &self,
-        from: PathBuf,
-        to: PathBuf,
-    ) -> Result<(), Box<dyn Error>>
-    {
-        if self.dry {
-            info!("Dry run: Skipping ISO extraction.");
-            return Ok(());
-        }
+    // pub fn extract_iso(
+    //     &self,
+    //     from: PathBuf,
+    //     to: PathBuf,
+    // ) -> Result<(), Box<dyn Error>>
+    // {
+    //     if self.dry {
+    //         info!("Dry run: Skipping ISO extraction.");
+    //         return Ok(());
+    //     }
 
-        let mount_point = TempDir::new()?;
-        let mount_point = mount_point.path().into();
+    //     let mount_point = TempDir::new()?;
+    //     let mount_point = mount_point.path().into();
 
-        self.cli_handler.mount_iso(&from, &mount_point)?;
+    //     self.cli_handler.mount_iso(&from, &mount_point)?;
 
-        self.cli_handler.copy_rec(&mount_point, &to)
-    }
+    //     self.cli_handler.copy_rec(&mount_point, &to)
+    // }
 }
 
 #[cfg(test)]
@@ -191,13 +191,13 @@ mod tests
     use super::*;
 
     #[test]
-    fn test_cli_handler_copy()
+    fn test_cli_handler_copy_single_file()
     {
         let from = PathBuf::from("./demo/out_exists.csv");
         assert!(from.exists());
         assert!(!from.is_dir());
 
-        let to = PathBuf::from("./demo/out_exists_copy.csv");
+        let to = PathBuf::from("./demo/out/out_exists_copy.csv");
         assert!(!to.exists());
 
         let clih = get_cli_handler();
@@ -207,6 +207,27 @@ mod tests
         assert!(!to.is_dir());
 
         fs::remove_file(to).unwrap();
+    }
+
+    #[test]
+    fn test_cli_handler_copy_dir()
+    {
+        let from = PathBuf::from("./demo/ram_disk_template_contents");
+        assert!(from.exists());
+        assert!(from.is_dir());
+
+        let to = PathBuf::from("./demo/out/ram_disk_template_contents");
+        assert!(!to.exists());
+
+        let clih = get_cli_handler();
+
+        clih.copy_rec(&from, &to).unwrap();
+        assert!(to.exists());
+        assert!(to.is_dir());
+
+        assert_eq!(1, to.read_dir().unwrap().collect::<Vec<_>>().len());
+
+        fs::remove_dir_all(to).unwrap();
     }
 
     // #[test]

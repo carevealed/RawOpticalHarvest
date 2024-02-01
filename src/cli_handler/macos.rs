@@ -93,8 +93,8 @@ impl CliHandler for MacosCliHandler
         let in_path = path::absolute(in_path)?.into_os_string();
 
         Command::new("chmod")
-            .arg(format!("666"))
-            .arg(format!("--recursive"))
+            .arg("666")
+            .arg("--recursive")
             .arg(in_path)
             .run()
             .map(|_| ())
@@ -103,28 +103,25 @@ impl CliHandler for MacosCliHandler
             })
     }
 
-    fn mount_iso(
-        &self,
-        iso_path: &PathBuf,
-        mount_point: &PathBuf,
-    ) -> Result<(), Box<dyn Error>>
-    {
-        debug!(
-            "Mounting ISO file from {iso_path:?} at mount point \
-             {mount_point:?}"
-        );
+    // fn mount_iso(
+    //     &self,
+    //     iso_path: &PathBuf,
+    // ) -> Result<PathBuf, Box<dyn Error>>
+    // {
+    //     debug!(
+    //         "Mounting ISO file from {iso_path:?} at mount point \
+    //          {mount_point:?}"
+    //     );
 
-        Command::new("mount")
-            .arg(format!("--options"))
-            .arg(format!("loop"))
-            .arg(iso_path)
-            .arg(mount_point)
-            .run()
-            .map(|_| ())
-            .map_err(|e| {
-                format!("Failure while trying to mount ISO: {e}").into()
-            })
-    }
+    //     Command::new("hdiutil")
+    //         .arg("mount")
+    //         .arg(iso_path)
+    //         .run()
+    //         .map(|_| ())
+    //         .map_err(|e| {
+    //             format!("Failure while trying to mount ISO: {e}").into()
+    //         })
+    // }
 
     fn copy_rec(
         &self,
@@ -135,7 +132,7 @@ impl CliHandler for MacosCliHandler
         debug!("Copying files from {from:?} to {to:?}");
 
         Command::new("cp")
-            .arg(format!("--recursive"))
+            .arg("--recursive")
             .arg(from)
             .arg(to)
             .run()
