@@ -19,11 +19,11 @@ impl CliHandler for MacosCliHandler
 {
     fn select_rom_device(&self) -> Result<String, Box<dyn Error>>
     {
-        println!("{}", Command::new("drutil").arg("--status").run()?);
+        println!("{}", Command::new("diskutil").arg("list").run()?);
 
         let dev = Text::new(
-            "Enter the device NAME you would like to image from for this \
-             session:",
+            "Enter the DISK identifier you would like to image from for \
+             this session.  (Do not enter the partition identifier.  For example, disk4 is correct, but disk4s1 is not.):",
         )
         .prompt()?;
 
@@ -67,17 +67,18 @@ impl CliHandler for MacosCliHandler
             .unwrap();
         let to = path::absolute(to)?.into_os_string().into_string().unwrap();
 
-        Command::new("dd")
-            .arg(format!("if={from}"))
-            .arg(format!("of={to}"))
-            .arg("conv=noerror,sync")
-            .arg("bs=1M")
+        Command::new("hdiutil")
+            .arg(format!("makehybrid"))
+            .arg(format!("-iso"))
+            .arg(format!("-joliet"))
+            .arg(format!("-o"))
+            .arg(format!("{to}"))
+            .arg(format!("{from}"))
             .run()
             .map(|_| ())
             .map_err(|e| {
                 format!(
-                    "Failure while trying to run dd.  Should this program be \
-                     running as root? Details:\n{e}"
+                    "Failure while dumping ISO. Details:\n{e}"
                 )
                 .into()
             })
