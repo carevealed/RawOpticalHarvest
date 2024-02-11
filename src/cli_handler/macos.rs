@@ -44,13 +44,17 @@ impl CliHandler for MacosCliHandler
         dev: &String,
     ) -> Result<String, Box<dyn Error>>
     {
-        // TODO: parse diskutil output
         diskutil_dev_label(dev)?
             .lines()
             .into_iter()
+            .filter_map(|l| {
+                l.trim()
+                    .strip_prefix("Volume Name:")
+                    .map(|vn| vn.trim())
+            })
             .next()
             .ok_or(format!("Device '{dev}' label could not be found.").into())
-            .map(|label| label.into())
+            .map(|vn| vn.into())
     }
 
     fn dump_iso(
@@ -133,7 +137,7 @@ impl CliHandler for MacosCliHandler
         debug!("Copying files from {from:?} to {to:?}");
 
         Command::new("cp")
-            .arg("--recursive")
+            .arg("-R")
             .arg(from)
             .arg(to)
             .run()

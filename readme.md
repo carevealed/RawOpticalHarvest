@@ -22,8 +22,8 @@ For every line in the CSV:
   - Prompt the user to locate and insert the disc associated with the cvp.
   - Wait for the user to press enter to continue.
   - Retain the system's disk label (sdl) from the imd.
-  - Compute the cvp's iso location (cil) as rdl/sdl + ".iso"
-  - Compute the cvp's file location (cfl) as rdl/sdl.
+  - Compute the cvp's iso location (cil) as rdl/cvp_sdl.iso
+  - Compute the cvp's file location (cfl) as rdl/cvp_sdl.
   - Generate the imd's ISO and write it to cil.
   - Extract the contents of the cil to the cfl.
   - Eject the disk.

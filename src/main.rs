@@ -152,31 +152,39 @@ fn main() -> Result<(), Box<dyn Error>>
             // Retain the system's disk label (sdl) from the imd.
             let sdl = agent.get_rom_device_label(&dev)?;
 
-            // Compute the cvp's iso location (cil) as rdl/sdl + ".iso"
+            // Compute the cvp's iso location (cil) as rdl/cvp_sdl + ".iso"
             let mut cil = rdl.clone();
-            cil.push(format!("{sdl}.iso"));
+            cil.push(format!("{cvp}_{sdl}.iso"));
             cil.validate_path(PathValidationOptions::DoesNotExist)?;
 
             // Write the imd's ISO and to cil.
-            let mut dev_path = PathBuf::from("/dev");
-            dev_path.push(&dev);
-            agent.dump_iso(&dev_path, &cil)?;
+            #[cfg(target_os = "linux")]
+            let mount_point = {
+                let mut dev_path = PathBuf::from("/dev");
+                dev_path.push(&dev);
+                dev_path
+            };
 
-            // Compute the cvp's file location (cfl) as rdl/sdl.
+            #[cfg(target_os = "macos")]
+            let mount_point = {
+                let mut dev_path = PathBuf::from("/Volumes");
+                dev_path.push(&sdl);
+                dev_path
+            };
+
+            agent.dump_iso(&mount_point, &cil)?;
+            
+            // Compute the cvp's file location (cfl) as rdl/cvp_sdl.
             let mut cfl = rdl.clone();
-            cfl.push(sdl);
+            cfl.push(format!("{cvp}_{sdl}"));
             cfl.validate_path(PathValidationOptions::DoesNotExist)?;
 
-            // Extract the contents of the cil to the cfl.
-            // TODO: test with root.  We have an issue where the program will
-            // need to be run with elevated privileges in order to mount the iso
-            // in order to extract the contents.  Let's validate this once we
-            // confirm the rest of the system is operating as expected.
-            // agent.extract_iso(cil, cfl);
+            // Extract the contents of the disk to the cfl.
+            agent.copy_rec(mount_point, cfl)?;
 
             // Fix permissions in the entire rdl since we're probably running as
             // root.
-            agent.fix_permissions(&rdl)?;
+            // agent.fix_permissions(&pdl)?;
 
             // Eject the disk.
             agent.eject_tray()?;

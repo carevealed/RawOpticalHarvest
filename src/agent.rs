@@ -131,7 +131,7 @@ impl Agent
         to: &PathBuf,
     ) -> Result<(), Box<dyn Error>>
     {
-        info!("Creating ISO from {from:?} to at {to:?}.");
+        println!("Creating ISO from {from:?} at {to:?}.");
 
         if self.dry {
             info!("Dry run: Skipping ISO dump.");
@@ -139,15 +139,10 @@ impl Agent
         }
 
         println!("Please wait...");
-        let result = self.cli_handler.dump_iso(from, to).map_err(|e| {
-            format!(
-                "Error while dumping ISO (from: '{from:?}', to: '{to:?}'): {e}"
-            )
-            .into()
-        });
+        self.cli_handler.dump_iso(from, to)?;
         println!("ISO dump finished.");
 
-        result
+        Ok(())
     }
 
     pub fn fix_permissions(
@@ -165,24 +160,26 @@ impl Agent
         self.cli_handler.fix_permissions(in_path)
     }
 
-    // pub fn extract_iso(
-    //     &self,
-    //     from: PathBuf,
-    //     to: PathBuf,
-    // ) -> Result<(), Box<dyn Error>>
-    // {
-    //     if self.dry {
-    //         info!("Dry run: Skipping ISO extraction.");
-    //         return Ok(());
-    //     }
+    pub fn copy_rec(
+        &self,
+        from: PathBuf,
+        to: PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
 
-    //     let mount_point = TempDir::new()?;
-    //     let mount_point = mount_point.path().into();
+        println!("Copying files from {from:?} to {to:?}.");
 
-    //     self.cli_handler.mount_iso(&from, &mount_point)?;
+        println!("Please wait...");
+        if self.dry {
+            info!("Dry run: Skipping Copy.");
+            return Ok(());
+        }
 
-    //     self.cli_handler.copy_rec(&mount_point, &to)
-    // }
+        self.cli_handler.copy_rec(&from, &to)?;
+        println!("File copy finished.");
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
