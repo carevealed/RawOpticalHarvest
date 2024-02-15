@@ -16,6 +16,8 @@ use log::info;
 use std::{
     error::Error,
     path::PathBuf,
+    thread,
+    time,
 };
 
 fn main() -> Result<(), Box<dyn Error>>
@@ -131,7 +133,26 @@ fn main() -> Result<(), Box<dyn Error>>
             }
 
             // Retain the system's disk label (sdl) from the imd.
-            let sdl = agent.get_rom_device_label(&dev)?;
+            let sdl = {
+                let temp_sdl = agent.get_rom_device_label(&dev);
+
+                match temp_sdl {
+                    | Err(_) => {
+                        let wait_sec = 5;
+
+                        println!(
+                            "Could not find the disk label.  Assuming the \
+                             disk is not in the drive, and waiting {wait_sec} \
+                             seconds before retrying..."
+                        );
+
+                        thread::sleep(time::Duration::from_secs(wait_sec));
+
+                        agent.get_rom_device_label(&dev)?
+                    }
+                    | Ok(sdl) => sdl,
+                }
+            };
 
             // Calculate the mounted location to copy from
             #[cfg(target_os = "linux")]
