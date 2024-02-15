@@ -7,12 +7,12 @@ use std::{
 
 pub trait RowPrinter
 {
-    fn print_all_rows(&mut self) -> Result<(), Box<dyn Error>>;
+    fn print_all_rows(&self) -> Result<(), Box<dyn Error>>;
 }
 
 impl RowPrinter for PathBuf
 {
-    fn print_all_rows(&mut self) -> Result<(), Box<dyn Error>>
+    fn print_all_rows(&self) -> Result<(), Box<dyn Error>>
     {
         for result in self.csv()?.records() {
             let record = result?;
