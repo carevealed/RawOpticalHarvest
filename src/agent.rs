@@ -13,7 +13,10 @@ use crate::{
         PathValidator,
     },
 };
-use inquire::Text;
+use inquire::{
+    Confirm,
+    Text,
+};
 use log::info;
 use std::{
     error::Error,
@@ -46,6 +49,48 @@ impl Agent
         Ok(Agent { args, cli_handler })
     }
 
+    pub fn create_dir_or_prompt_if_exists(
+        &self,
+        path: &PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
+        let path_s = path
+            .to_str()
+            .ok_or(format!("Directory path could not be generated."))?;
+
+        if path.exists() {
+            if path.is_file() {
+                return Err(format!(
+                    "File {path_s} already exists and is a file, but should \
+                     be a directory."
+                )
+                .into());
+            }
+
+            if Confirm::new(&format!(
+                "{path_s} already exists.  Would you like to continue \
+                 importing? (Yes/No)"
+            ))
+            .prompt()?
+            {
+                Ok(())
+            } else {
+                Err(format!(
+                    "File {path_s} already exists and user has declined to \
+                     continue."
+                )
+                .into())
+            }
+        } else if self.args.dry_run {
+            println!("Dry Run: Skipping creating {path_s}");
+            Ok(())
+        } else {
+            // Create the directory.
+            self.create_directory(&path)?;
+            Ok(())
+        }
+    }
+
     pub fn get_input_csv_path(&self) -> PathBuf
     {
         let mut path = self.args.csv_path.clone();
@@ -65,9 +110,7 @@ impl Agent
                         DirectoryStatus::IsNotDirectory,
                     )) {
                         | Err(e) => {
-                            eprintln!(
-                                "Error while setting input CSV Path: {e}"
-                            );
+                            eprintln!("Error with input CSV Path: {e}");
                             path = None;
                         }
                         | Ok(()) => {
@@ -101,8 +144,7 @@ impl Agent
                     )) {
                         | Err(e) => {
                             eprintln!(
-                                "Error while setting output parent directory: \
-                                 {e}"
+                                "Error while with output parent directory: {e}"
                             );
                             path = None;
                         }

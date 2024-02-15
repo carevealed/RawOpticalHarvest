@@ -2,19 +2,16 @@
 use carroh::{
     agent::Agent,
     cli::Cli,
-    csv_processor::{
-        common::{
-            header_searcher::HeaderSearcher,
-            path_reader::PathReader,
-        },
-        path_validator::{
-            PathValidationOptions,
-            PathValidator,
-        },
+    csv_processor::common::{
+        header_searcher::HeaderSearcher,
+        path_reader::PathReader,
     },
 };
 use clap::Parser;
-use inquire::Confirm;
+use inquire::{
+    Confirm,
+    Select,
+};
 use log::info;
 use std::{
     error::Error,
@@ -88,22 +85,16 @@ fn main() -> Result<(), Box<dyn Error>>
     let mut pdl = ofp.clone();
     pdl.push(format!("{gcd}_{marc}"));
 
-    // Make sure the pdl does not exist.
-    pdl.validate_path(PathValidationOptions::DoesNotExist)?;
-
-    // Create the pdl.
-    agent.create_directory(&pdl)?;
+    // Handle a potentially existing pdl.
+    agent.create_dir_or_prompt_if_exists(&pdl)?;
 
     // Compute the raw file directory location (rdl) as
     // pdl/marc + "_" + gcd + "_Raw".
     let mut rdl = pdl.clone();
     rdl.push(format!("{marc}_{gcd}_Raw"));
 
-    // Make sure the rdl does not exist.
-    rdl.validate_path(PathValidationOptions::DoesNotExist)?;
-
-    // Create the rdl.
-    agent.create_directory(&rdl)?;
+    // Handle a potentially existing rdl.
+    agent.create_dir_or_prompt_if_exists(&rdl)?;
 
     // Prompt the user to select the imaging device (imd) from the local
     // system devices. Use third argument as default.
@@ -145,7 +136,35 @@ fn main() -> Result<(), Box<dyn Error>>
             // Compute the cvp's iso location (cil) as rdl/cvp_sdl + ".iso"
             let mut cil = rdl.clone();
             cil.push(format!("{cvp}_{sdl}.iso"));
-            cil.validate_path(PathValidationOptions::DoesNotExist)?;
+
+            if cil.exists() {
+                let cil_s = cil
+                    .to_str()
+                    .ok_or(format!("ISO path could not be generated."))?;
+
+                let skip_option =
+                    format!("Skip {cvp} and continue to the next identifier.");
+
+                if Select::new(
+                    &format!(
+                        "The iso write location, {cil_s} already exists, so \
+                         importing {cvp} cannot continue.  Would you like to \
+                         skip importing {cvp} and move on to the remaining \
+                         records?",
+                    ),
+                    vec!["Cancel Import and Exit Program", &skip_option],
+                )
+                .prompt()?
+                .eq(&skip_option)
+                {
+                    continue;
+                } else {
+                    return Err("The import encountered existing files which \
+                                cannot not be overwritten, and the user \
+                                elected to cancel the import."
+                        .into());
+                }
+            }
 
             // Write the imd's ISO and to cil.
             #[cfg(target_os = "linux")]
@@ -167,7 +186,35 @@ fn main() -> Result<(), Box<dyn Error>>
             // Compute the cvp's file location (cfl) as rdl/cvp_sdl.
             let mut cfl = rdl.clone();
             cfl.push(format!("{cvp}_{sdl}"));
-            cfl.validate_path(PathValidationOptions::DoesNotExist)?;
+
+            if cfl.exists() {
+                let cfl_s = cfl
+                    .to_str()
+                    .ok_or(format!("File dump path could not be generated."))?;
+
+                let skip_option =
+                    format!("Skip {cvp} and continue to the next identifier.");
+
+                if Select::new(
+                    &format!(
+                        "The file dump location, {cfl_s} already exists, so \
+                         importing {cvp} cannot continue.  Would you like to \
+                         skip importing {cvp} and move on to the remaining \
+                         records?",
+                    ),
+                    vec!["Cancel Import and Exit Program", &skip_option],
+                )
+                .prompt()?
+                .eq(&skip_option)
+                {
+                    continue;
+                } else {
+                    return Err("The import encountered existing files which \
+                                cannot not be overwritten, and the user \
+                                elected to cancel the import."
+                        .into());
+                }
+            }
 
             // Extract the contents of the disk to the cfl.
             agent.copy_rec(mount_point, cfl)?;
