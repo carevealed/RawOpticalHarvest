@@ -284,8 +284,8 @@ impl Agent
 
     pub fn copy_rec(
         &self,
-        from: PathBuf,
-        to: PathBuf,
+        from: &PathBuf,
+        to: &PathBuf,
     ) -> Result<(), Box<dyn Error>>
     {
         println!("Copying files from {from:?} to {to:?}.");
@@ -296,7 +296,7 @@ impl Agent
             return Ok(());
         }
 
-        self.cli_handler.copy_rec(&from, &to)?;
+        self.cli_handler.copy_rec(from, to)?;
         println!("File copy finished.");
 
         Ok(())

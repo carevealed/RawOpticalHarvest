@@ -133,40 +133,7 @@ fn main() -> Result<(), Box<dyn Error>>
             // Retain the system's disk label (sdl) from the imd.
             let sdl = agent.get_rom_device_label(&dev)?;
 
-            // Compute the cvp's iso location (cil) as rdl/cvp_sdl + ".iso"
-            let mut cil = rdl.clone();
-            cil.push(format!("{cvp}_{sdl}.iso"));
-
-            if cil.exists() {
-                let cil_s = cil
-                    .to_str()
-                    .ok_or(format!("ISO path could not be generated."))?;
-
-                let skip_option =
-                    format!("Skip {cvp} and continue to the next identifier.");
-
-                if Select::new(
-                    &format!(
-                        "The iso write location, {cil_s} already exists, so \
-                         importing {cvp} cannot continue.  Would you like to \
-                         skip importing {cvp} and move on to the remaining \
-                         records?",
-                    ),
-                    vec!["Cancel Import and Exit Program", &skip_option],
-                )
-                .prompt()?
-                .eq(&skip_option)
-                {
-                    continue;
-                } else {
-                    return Err("The import encountered existing files which \
-                                cannot not be overwritten, and the user \
-                                elected to cancel the import."
-                        .into());
-                }
-            }
-
-            // Write the imd's ISO and to cil.
+            // Calculate the mounted location to copy from
             #[cfg(target_os = "linux")]
             let mount_point = {
                 let mut dev_path = PathBuf::from("/dev");
@@ -180,8 +147,6 @@ fn main() -> Result<(), Box<dyn Error>>
                 dev_path.push(&sdl);
                 dev_path
             };
-
-            agent.dump_iso(&mount_point, &cil)?;
 
             // Compute the cvp's file location (cfl) as rdl/cvp_sdl.
             let mut cfl = rdl.clone();
@@ -217,11 +182,43 @@ fn main() -> Result<(), Box<dyn Error>>
             }
 
             // Extract the contents of the disk to the cfl.
-            agent.copy_rec(mount_point, cfl)?;
+            agent.copy_rec(&mount_point, &cfl)?;
 
-            // Fix permissions in the entire rdl since we're probably running as
-            // root.
-            // agent.fix_permissions(&pdl)?;
+            // Compute the cvp's iso location (cil) as rdl/cvp_sdl + ".iso"
+            let mut cil = cfl.clone();
+            cil.push(format!("{cvp}_{sdl}.iso"));
+
+            if cil.exists() {
+                let cil_s = cil
+                    .to_str()
+                    .ok_or(format!("ISO path could not be generated."))?;
+
+                let skip_option =
+                    format!("Skip {cvp} and continue to the next identifier.");
+
+                if Select::new(
+                    &format!(
+                        "The iso write location, {cil_s} already exists, so \
+                         importing {cvp} cannot continue.  Would you like to \
+                         skip importing {cvp} and move on to the remaining \
+                         records?",
+                    ),
+                    vec!["Cancel Import and Exit Program", &skip_option],
+                )
+                .prompt()?
+                .eq(&skip_option)
+                {
+                    continue;
+                } else {
+                    return Err("The import encountered existing files which \
+                                cannot not be overwritten, and the user \
+                                elected to cancel the import."
+                        .into());
+                }
+            }
+
+            // Write the imd's ISO and to cil.
+            agent.dump_iso(&mount_point, &cil)?;
 
             // Eject the disk.
             agent.eject_tray()?;
