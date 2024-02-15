@@ -1,29 +1,86 @@
-Find the index of the marc column using the header.  If it is not there, indicate the error and exit.
-For every line in the CSV, verify that the marc column is equal to the previous row's value.  If a row has a different value, print the invalid lines and exit.
-- Should this be done for the grant cycle as well?
-Determine if the file should use the obj_call_number column (ocn) or obj_temporary_id column (oti) field as the per-item identifier column (pit)
-- Check every line in the CSV for the existence of either ocn or oti.
-- If ocn is not available in every line, and oti is not available on every line, print an error that one is required on all lines and exit.
-- If the ocn exists on all lines but not oti, use the ocn as the pit. Print the selected choice.
-- If the oti exists on all lines but not ocn, use the oti as the pit. Print the selected choice.
-- If all lines contain both ocn and oti, use the ocn as the pit. Print the selected choice.
-Compute the grant cycle descriptor (gcd):
-- Take the obj_grant_cycle field from the first row.
-- Substitute any "/" characters for "-", giving the gcd.
-Compute the parent directory location (pdl):
-- Prompt the user for the location of the output folder parent (ofp).
-- Calculate pdl as ofp/gcd + "_" + marc
-Check if the pdl exists.  If it does, prompt the user to continue.  If it does not, create it.
-Compute the raw file directory location (rdl) as pdl/marc + "_" + gcd + "_Raw".
-Check if the rdl exists.  If it does, prompt the user to continue.  If it does not, create it.
-Prompt the user to select the imaging device (imd) from the local system devices.  Use a hard-coded default.
-For every line in the CSV:
-- For each semi-colon-separated value in the pit (cvp):
-  - Prompt the user to locate and insert the disc associated with the cvp.
-  - Wait for the user to press enter to continue.
-  - Retain the system's disk label (sdl) from the imd.
-  - Compute the cvp's iso location (cil) as rdl/cvp_sdl.iso
-  - Compute the cvp's file location (cfl) as rdl/cvp_sdl.
-  - Generate the imd's ISO and write it to cil.
-  - Extract the contents of the cil to the cfl.
-  - Eject the disk.
+# What does it do?
+This tool facilitates the internal California Revealed process of using a CSV file to intake digital objects from partners.
+That is, it helps the organization archive received disks.
+
+In broad terms this program will:
+  1. Read a list of disks to archive to a specific directory
+  2. Prompt the user to insert the disks
+  3. Create ISO and file-system copies of the disk
+  4. Eject the disk
+  5. Check for any remaining disks to read and repeat from 2.
+
+# How do I use it?
+The program functions as a command-line tool.
+Users should run the compiled binary directly from the terminal.
+Use the `-h` flag to view documentation, such as:
+`carroh -h`
+which should provide the following output:
+```
+California Revealed Raw Optical Harvest
+
+Usage: carroh [OPTIONS] <Input CSV> <Output Parent Directory> [ROM Device]
+
+Arguments:
+  <Input CSV>                Path to the CSV file we want to process
+  <Output Parent Directory>  Output parent directory
+  [ROM Device]               Device to use as ISO generation source.  If none is provided, the user will be prompted to select a device
+
+Options:
+  -d, --dry-run     Don't actually create or modify any files
+  -v, --verbose...  Increase logging verbosity
+  -q, --quiet...    Decrease logging verbosity
+  -h, --help        Print help (see more with '--help')
+  -V, --version     Print version
+```
+
+## Arguments
+### Input CSV
+This is an exported document from the California Revealed Archipelago instance.
+Users should have previously understood the export process to understand which objects are planned to be imported.
+Once downloaded, the *path to the CSV* is provided in this argument.
+
+### Output Parent Directory
+This is probably a large mass storage device such as an external drive.
+The program will use this directory to create the appropriate `marc`- and `identifier`-based folders for the "in-taken" ISO and file system copies.
+
+### ROM Device
+If the third argument is not provided, the program will attempt to help the user decide the appropriate device from which to read.
+It does this by printing the results of the system-appropriate command, listing all available devices.
+This process can be confusing to non-technical users, but, generally, the ROM Device will be something like `Disk4` on macOS.
+Following the in-program instructions should lead users to the same results.
+Subsequent runs of the program which should use the same device can include the ROM Device argument to skip this step.
+
+Once a ROM Device has been identified, the same import CSV is linked to that device for the entirety of the CSV intake process.
+It is not possible at this time, for example, to use multiple disk drives for the same import, though the inverse is possible (but not suggested).
+
+## Caveats
+### Conservative
+The program attempts to be very conservative about what changes it makes to the output directory.
+If the program errors in the middle of an intake, it is currently the user's responsibility to change the parent directory or clean up any erroneously directories the program has erroneously created prior to re-running.
+This is planned to be amended in future iterations of the project by prompting the user to skip the creation or cancel the intake.
+
+### Dry Run
+If users are unsure if they would like to actually modify the contents of the disk but instead just view what the program would do, they can use the `-d` flag.
+
+### Prompts
+When prompted for `Yes` or `No` answers, the user may use abbreviated forms, such as `y` or `no`.
+
+### Verbosity
+The verbosity flag is flexible.
+Users may issue a single `v` and up to four `v`'s to incur progressively more logging.
+For example, `-v` will display some additional output such as commands being issued, and `-vvvv` will output all possible details.
+
+### Disk Settling
+Sadly there is no good way to identify when a disk has been inserted into the system until the media is mounted by the operating system.
+For this reason, when the user is prompted to identify if the disk has been inserted, they should only answer `yes` when the disk has been mounted and is visible to them.
+For example, if the Finder does not see the disk, the user should wait to answer the prompt.
+This is planned to be amended in future versions to wait briefly and reprompt the user if the disk has not been successfully identified.
+
+### Resumption
+Stopping an import in the middle of a set of disks is complex and planned to be resolved in future iterations of the project.
+For now, the solution is to modify the input CSV to remove the already imported disks.
+
+### Initial Disk
+ROM Devices will not display to the device identification process unless they have media in them.
+If the user is prompted to identify the disk in the drive while the media is inserted, but are unsure if the media matches the corresponding identifier, they may answer `No` to that prompt.
+The system should then eject the media, allowing the user to positively identify the media and take any appropriate corrective action.
