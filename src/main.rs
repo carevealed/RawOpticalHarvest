@@ -8,7 +8,6 @@ use carroh::{
             path_reader::PathReader,
         },
         path_validator::{
-            DirectoryStatus,
             PathValidationOptions,
             PathValidator,
         },
@@ -30,32 +29,25 @@ fn main() -> Result<(), Box<dyn Error>>
         .filter_level(args.verbose.log_level_filter())
         .init();
 
+    let mut agent = Agent::new(args)?;
+
     // Take the first argument as the csv location.
-    let input_path = PathBuf::from(&args.csv_path);
+    let input_path = agent.get_input_csv_path();
     info!("Input CSV: {input_path:?}",);
-    input_path.validate_path(PathValidationOptions::Exists(
-        DirectoryStatus::IsNotDirectory,
-    ))?;
 
     // Take the second argument as the output parent location/output file path
     // (ofp).
-    let ofp = PathBuf::from(&args.output_parent_path);
+    let ofp = agent.get_output_parent();
     info!("Output parent location: {ofp:?}");
-
-    ofp.validate_path(PathValidationOptions::Exists(
-        DirectoryStatus::IsDirectory,
-    ))?;
-
-    let mut agent = Agent::new(input_path.clone(), args.dry_run)?;
 
     // Ensure marc column exists.  If it is not there, indicate the error and
     // exit.
     // For every line in the CSV, verify that the marc column is equal
     // to the previous row's value.  If a row has a different value, print the
     // invalid lines and exit.
-    agent.print_all_rows()?;
+    agent.print_all_rows(&input_path)?;
     agent
-        .assert_equal_column_values(&"marc".to_string())
+        .assert_equal_column_values(&"marc".to_string(), &input_path)
         .map_err(|e| format!("{e}"))?;
 
     // Ensure obj_grant_cycle column exists.  If it is not there, indicate the
@@ -64,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>>
     // to the previous row's value.  If a row has a different value, print the
     // invalid lines and exit.
     agent
-        .assert_equal_column_values(&"obj_grant_cycle".to_string())
+        .assert_equal_column_values(&"obj_grant_cycle".to_string(), &input_path)
         .map_err(|e| format!("{e}"))?;
 
     // Determine if the file should use the obj_call_number column (ocn) or
@@ -81,14 +73,15 @@ fn main() -> Result<(), Box<dyn Error>>
     //   the selected choice.
     let ocn_col = "obj_call_number".to_string();
     let oti_col = "obj_temporary_id".to_string();
-    let pit_col = agent.pick_populated_column(&ocn_col, &oti_col)?;
+    let pit_col =
+        agent.pick_populated_column(&ocn_col, &oti_col, &input_path)?;
     let pit_col_i = input_path.find_single_header_index(pit_col)?;
 
     // Compute the grant cycle descriptor (gcd):
     // - Take the obj_grant_cycle field from the first row.
     // - Substitute any "/" characters for "-", giving the gcd.
-    let ogc = agent.first_value(&"obj_grant_cycle".to_string())?;
-    let marc = agent.first_value(&"marc".to_string())?;
+    let ogc = agent.first_value(&"obj_grant_cycle".to_string(), &input_path)?;
+    let marc = agent.first_value(&"marc".to_string(), &input_path)?;
     let gcd = ogc.replace("/", "-");
 
     // Compute the parent directory location (pdl) as ofp/gcd + "_" + marc
@@ -114,10 +107,7 @@ fn main() -> Result<(), Box<dyn Error>>
 
     // Prompt the user to select the imaging device (imd) from the local
     // system devices. Use third argument as default.
-    let dev = match args.rom_device {
-        | Some(d) => d,
-        | None => agent.select_rom_device()?,
-    };
+    let dev = agent.select_rom_device()?;
     info!("Using device '{dev}' for imaging.");
 
     // For every line in the CSV:
@@ -173,7 +163,7 @@ fn main() -> Result<(), Box<dyn Error>>
             };
 
             agent.dump_iso(&mount_point, &cil)?;
-            
+
             // Compute the cvp's file location (cfl) as rdl/cvp_sdl.
             let mut cfl = rdl.clone();
             cfl.push(format!("{cvp}_{sdl}"));

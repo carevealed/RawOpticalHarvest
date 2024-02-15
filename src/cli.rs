@@ -14,11 +14,11 @@ pub struct Cli
     /// Path to the CSV file we want to process.
 
     #[arg(value_name = "Input CSV")]
-    pub csv_path: String,
+    pub csv_path: Option<String>,
 
     /// Output parent directory.
     #[arg(value_name = "Output Parent Directory")]
-    pub output_parent_path: String,
+    pub output_parent_path: Option<String>,
 
     /// Device to use as ISO generation source.  If none is provided, the user
     /// will be prompted to select a device.

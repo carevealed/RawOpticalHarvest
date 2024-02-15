@@ -4,7 +4,16 @@ use super::csv_processor::{
     populated_column::PopulatedColumn,
     row_printer::RowPrinter,
 };
-use crate::cli_handler::*;
+use crate::{
+    cli::Cli,
+    cli_handler::*,
+    csv_processor::path_validator::{
+        DirectoryStatus,
+        PathValidationOptions,
+        PathValidator,
+    },
+};
+use inquire::Text;
 use log::info;
 use std::{
     error::Error,
@@ -24,57 +33,123 @@ fn get_cli_handler() -> Box<dyn CliHandler>
 
 pub struct Agent
 {
-    source_csv_path: PathBuf,
-    dry: bool,
+    args: Cli,
     cli_handler: Box<dyn CliHandler>,
 }
 
 impl Agent
 {
-    pub fn new(
-        source_csv_path: PathBuf,
-        dry: bool,
-    ) -> Result<Agent, Box<dyn Error>>
+    pub fn new(args: Cli) -> Result<Agent, Box<dyn Error>>
     {
         let cli_handler = get_cli_handler();
 
-        Ok(Agent {
-            source_csv_path,
-            dry,
-            cli_handler,
-        })
+        Ok(Agent { args, cli_handler })
     }
 
-    pub fn print_all_rows(&mut self) -> Result<(), Box<dyn Error>>
+    pub fn get_input_csv_path(&self) -> PathBuf
     {
-        self.source_csv_path.print_all_rows()
+        let mut path = self.args.csv_path.clone();
+
+        loop {
+            match path {
+                | None => {
+                    path =
+                        Text::new("Please provide the path to the input CSV:")
+                            .prompt()
+                            .ok();
+                }
+                | Some(p) => {
+                    let path_pb = PathBuf::from(p);
+
+                    match path_pb.validate_path(PathValidationOptions::Exists(
+                        DirectoryStatus::IsNotDirectory,
+                    )) {
+                        | Err(e) => {
+                            eprintln!(
+                                "Error while setting input CSV Path: {e}"
+                            );
+                            path = None;
+                        }
+                        | Ok(()) => {
+                            return path_pb;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn get_output_parent(&self) -> PathBuf
+    {
+        let mut path = self.args.output_parent_path.clone();
+
+        loop {
+            match path {
+                | None => {
+                    path = Text::new(
+                        "Please provide the path to the output parent \
+                         directory:",
+                    )
+                    .prompt()
+                    .ok();
+                }
+                | Some(p) => {
+                    let path_pb = PathBuf::from(p);
+
+                    match path_pb.validate_path(PathValidationOptions::Exists(
+                        DirectoryStatus::IsDirectory,
+                    )) {
+                        | Err(e) => {
+                            eprintln!(
+                                "Error while setting output parent directory: \
+                                 {e}"
+                            );
+                            path = None;
+                        }
+                        | Ok(()) => {
+                            return path_pb;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn print_all_rows(
+        &mut self,
+        source_csv_path: &PathBuf,
+    ) -> Result<(), Box<dyn Error>>
+    {
+        source_csv_path.print_all_rows()
     }
 
     pub fn assert_equal_column_values(
         &self,
         column_header: &String,
+        source_csv_path: &PathBuf,
     ) -> Result<(), Box<dyn Error>>
     {
-        self.source_csv_path
-            .assert_equal_column_values(column_header)
+        source_csv_path.assert_equal_column_values(column_header)
     }
 
     pub fn pick_populated_column<'a>(
         &self,
         column_header_one: &'a String,
         column_header_two: &'a String,
+        source_csv_path: &PathBuf,
     ) -> Result<&'a String, Box<dyn Error>>
     {
-        self.source_csv_path
+        source_csv_path
             .get_populated_column(column_header_one, column_header_two)
     }
 
     pub fn first_value(
         &mut self,
         column_header: &String,
+        source_csv_path: &PathBuf,
     ) -> Result<String, Box<dyn Error>>
     {
-        self.source_csv_path.get_first_value(column_header)
+        source_csv_path.get_first_value(column_header)
     }
 
     pub fn create_directory(
@@ -89,7 +164,7 @@ impl Agent
             );
         }
 
-        if self.dry {
+        if self.args.dry_run {
             info!("Dry run: Skipping creating the output directory.");
             return Ok(());
         }
@@ -101,9 +176,14 @@ impl Agent
 
     pub fn select_rom_device(&self) -> Result<String, Box<dyn Error>>
     {
-        self.cli_handler.select_rom_device().map_err(|e| {
-            format!("Error while selecting ROM device: {e}").into()
-        })
+        match &self.args.rom_device {
+            | Some(d) => Ok(d.clone()),
+            | None => {
+                self.cli_handler.select_rom_device().map_err(|e| {
+                    format!("Error while selecting ROM device: {e}").into()
+                })
+            }
+        }
     }
 
     pub fn eject_tray(&self) -> Result<(), Box<dyn Error>>
@@ -133,7 +213,7 @@ impl Agent
     {
         println!("Creating ISO from {from:?} at {to:?}.");
 
-        if self.dry {
+        if self.args.dry_run {
             info!("Dry run: Skipping ISO dump.");
             return Ok(());
         }
@@ -152,7 +232,7 @@ impl Agent
     {
         info!("Fixing permissions in {in_path:?}.");
 
-        if self.dry {
+        if self.args.dry_run {
             info!("Dry run: Skipping permissions fix.");
             return Ok(());
         }
@@ -166,11 +246,10 @@ impl Agent
         to: PathBuf,
     ) -> Result<(), Box<dyn Error>>
     {
-
         println!("Copying files from {from:?} to {to:?}.");
 
         println!("Please wait...");
-        if self.dry {
+        if self.args.dry_run {
             info!("Dry run: Skipping Copy.");
             return Ok(());
         }
