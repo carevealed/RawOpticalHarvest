@@ -18,11 +18,11 @@ which should provide the following output:
 ```
 California Revealed Raw Optical Harvest
 
-Usage: carroh [OPTIONS] <Input CSV> <Output Parent Directory> [ROM Device]
+Usage: carroh [OPTIONS] [Input CSV] [Output Parent Directory] [ROM Device]
 
 Arguments:
-  <Input CSV>                Path to the CSV file we want to process
-  <Output Parent Directory>  Output parent directory
+  [Input CSV]                Path to the CSV file we want to process
+  [Output Parent Directory]  Output parent directory
   [ROM Device]               Device to use as ISO generation source.  If none is provided, the user will be prompted to select a device
 
 Options:
@@ -56,8 +56,9 @@ It is not possible at this time, for example, to use multiple disk drives for th
 ## Caveats
 ### Conservative
 The program attempts to be very conservative about what changes it makes to the output directory.
-If the program errors in the middle of an intake, it is currently the user's responsibility to change the parent directory or clean up any erroneously directories the program has erroneously created prior to re-running.
-This is planned to be amended in future iterations of the project by prompting the user to skip the creation or cancel the intake.
+If the program detects that files it would otherwise write to already exist, it will prompt the user for guidance.
+For existing parent directories, the process is resumable, but if an identifier is detected on disk, the user must decide to exit the program or skip the identifier.
+This is because the project does not currently make an attempt to merge directories.
 
 ### Dry Run
 If users are unsure if they would like to actually modify the contents of the disk but instead just view what the program would do, they can use the `-d` flag.
@@ -74,11 +75,12 @@ For example, `-v` will display some additional output such as commands being iss
 Sadly there is no good way to identify when a disk has been inserted into the system until the media is mounted by the operating system.
 For this reason, when the user is prompted to identify if the disk has been inserted, they should only answer `yes` when the disk has been mounted and is visible to them.
 For example, if the Finder does not see the disk, the user should wait to answer the prompt.
-This is planned to be amended in future versions to wait briefly and reprompt the user if the disk has not been successfully identified.
+If the program does not detect a disk when it is expected, it will wait 5 seconds and then check again.
+If the disk is still not visible, the program will exit.
 
 ### Resumption
-Stopping an import in the middle of a set of disks is complex and planned to be resolved in future iterations of the project.
-For now, the solution is to modify the input CSV to remove the already imported disks.
+Because of the program's behavior regarding existing files, a given CSV may be interrupted after an identifier is successfully imported and resumed at a later date.
+In these circumstances, the user will be prompted to skip the pre-existing imported items that are discovered on disk, until the program finds one it has not yet handled.
 
 ### Initial Disk
 ROM Devices will not display to the device identification process unless they have media in them.
