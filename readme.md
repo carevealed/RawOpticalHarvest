@@ -81,6 +81,7 @@ If the disk is still not visible, the program will exit.
 ### Resumption
 Because of the program's behavior regarding existing files, a given CSV may be interrupted after an identifier is successfully imported and resumed at a later date.
 In these circumstances, the user will be prompted to skip the pre-existing imported items that are discovered on disk, until the program finds one it has not yet handled.
+Because the system generates the paths for the archives from the disk name, and uses those paths to verify the archive has already been performed, the user will be prompted to insert each successive disk in the csv until an unarchived disk is found.
 
 ### Initial Disk
 ROM Devices will not display to the device identification process unless they have media in them.
