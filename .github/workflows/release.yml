@@ -2,7 +2,6 @@ name: Build Mac Binary
 
 on:
   push:
-    branches: [ "main" ]
     tags:
       "*"
 
@@ -34,7 +33,6 @@ jobs:
           prerelease: false 
           release_name: ${{ github.ref }} 
           tag_name: ${{ github.ref }} 
-          body_path: CHANGELOG.md 
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
