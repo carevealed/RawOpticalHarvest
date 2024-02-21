@@ -10,8 +10,9 @@ In broad terms this program will:
   5. Check for any remaining disks to read and repeat from 2.
 
 # Installation
-Use the releases on the upper-right of this page to download the appropriate executable for your system.
-Unpack the file and install the executable wherever you prefer it to run from.
+Use the releases on the upper-right of this page to download the carroh executable.
+Releases are automatically using the integrated CI/CD system, and are generated for any pushed tag.
+Only macOS binaries are automatically generated.
 
 # How do I use it?
 The executable functions as a command-line tool.
