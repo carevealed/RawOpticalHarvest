@@ -9,8 +9,12 @@ In broad terms this program will:
   4. Eject the disk
   5. Check for any remaining disks to read and repeat from 2.
 
+# Installation
+Use the releases on the upper-right of this page to download the appropriate executable for your system.
+Unpack the file and install the executable wherever you prefer it to run from.
+
 # How do I use it?
-The program functions as a command-line tool.
+The executable functions as a command-line tool.
 Users should run the compiled binary directly from the terminal.
 Use the `-h` flag to view documentation, such as:
 `carroh -h`
