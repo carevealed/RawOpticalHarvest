@@ -1,5 +1,5 @@
 # What does it do?
-This tool facilitates the internal California Revealed process of using a CSV file to intake digital objects from partners.
+This tool facilitates the internal California Revealed process of using a CSV file to intake optical media from partners.
 That is, it helps the organization archive received disks.
 
 In broad terms this program will:
@@ -59,6 +59,13 @@ Once a ROM Device has been identified, the same import CSV is linked to that dev
 It is not possible at this time, for example, to use multiple disk drives for the same import, though the inverse is possible (but not suggested).
 
 ## Caveats
+### Erroring Disks
+It has been observed that some disks are not correctly copied to the file system as expected.
+The reason for this issue is currently unknown.
+The project will still attempt to archive the disks as normal, but will error and exit.
+Currently, the user must remove the failing object identifiers from the input CSV and resume the import manually.
+
+
 ### Conservative
 The program attempts to be very conservative about what changes it makes to the output directory.
 If the program detects that files it would otherwise write to already exist, it will prompt the user for guidance.
